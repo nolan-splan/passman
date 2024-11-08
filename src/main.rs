@@ -1,5 +1,7 @@
 mod encryption;
 
+extern crate rpassword;
+
 use home::home_dir;
 use std::{
     fs, 
@@ -22,9 +24,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("Select an option:");
-    println!("1. Add a new password");
-    println!("2. View all passwords");
-    println!("3. Exit");
+    println!("   1. Add a new password");
+    println!("   2. View all passwords");
+    println!("   3. Exit");
+    println!("\r");
 
     let mut option = String::new();
 
@@ -41,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("Passwords:");
             for password in passwords {
-                println!("     {}: '{}'", password.name, password.password);
+                println!("   {}: '{}'", password.name, password.password);
             }
         },
         "3" => {
@@ -57,14 +60,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn get_master_password() -> String {
-    // Prompt the user for the master password:
-    println!("Please enter your master password:");
-
-    let mut master_password = String::new();
-
-    io::stdin().read_line(&mut master_password).expect("Failed to read master password");
-
-    return master_password;
+    let password = rpassword::prompt_password("Please enter your master password: ").unwrap();
+    println!("\r");
+    return password;
 }
 
 fn set_up_passwords_file(master_password: String) -> Result<PathBuf, Box<dyn std::error::Error>> {
@@ -107,8 +105,6 @@ fn add_password(filepath: PathBuf, master_password: String) -> Result<(), Box<dy
 
     // Serialize updated data to JSON
     let updated_json = serde_json::to_string(&decrypted_data)?;
-
-    println!("Updated JSON: {}", updated_json);
 
     let home_dir = home_dir().expect("Failed to get home directory");
     let password_file_path = home_dir.join(PASSWORD_FILEPATH);
