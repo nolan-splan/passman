@@ -9,7 +9,6 @@ use serde::{Deserialize, Serialize};
 
 use std::{
     fs::File,
-    path::PathBuf,
     io::{BufReader, Read, Write},
 };
 
@@ -24,7 +23,7 @@ pub struct PasswordEntry {
     pub password: String
 }
 
-pub fn encrypt_data(data: String, master_password: String, filepath: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+pub fn encrypt_data(data: String, master_password: String) -> Result<(), Box<dyn std::error::Error>> {
     let mut salt = [0u8; 16];
     rand::thread_rng().fill(&mut salt);
 
@@ -41,8 +40,8 @@ pub fn encrypt_data(data: String, master_password: String, filepath: PathBuf) ->
     let ciphertext = cipher.encrypt(nonce, json_bytes)
         .expect("encryption failure!");
 
-    // Save salt, nonce, and ciphertext to a new file
-    let mut encrypted_file = File::create(filepath.clone())?;
+    let mut encrypted_file = File::create(crate::password_file_path())?;
+
     encrypted_file.write_all(&salt)?;       // Write salt
     encrypted_file.write_all(nonce)?;       // Write nonce
     encrypted_file.write_all(&ciphertext)?; // Write ciphertext
@@ -50,9 +49,9 @@ pub fn encrypt_data(data: String, master_password: String, filepath: PathBuf) ->
     Ok(())
 }
 
-pub fn decrypt_file(filepath: PathBuf, master_password: String) -> Result<PasswordData, Box<dyn std::error::Error>> {
+pub fn decrypt_password_file(master_password: String) -> Result<PasswordData, Box<dyn std::error::Error>> {
     // Open the encrypted file and read the contents
-    let mut file = BufReader::new(File::open(filepath)?);
+    let mut file = BufReader::new(File::open(crate::password_file_path())?);
 
     // Read salt (16 bytes)
     let mut salt = [0u8; 16];
