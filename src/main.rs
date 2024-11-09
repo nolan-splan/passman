@@ -2,7 +2,9 @@ mod encryption;
 
 extern crate rpassword;
 
+use memoize::memoize;
 use home::home_dir;
+
 use std::{
     fs, 
     io, 
@@ -107,7 +109,9 @@ fn add_password(master_password: String) -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
+#[memoize]
 pub fn password_file_path() -> PathBuf {
+    println!("password_file_path called");
     let home_dir = home_dir().expect("Failed to get home directory");
 
     return home_dir.join(PASSWORD_FILEPATH);
