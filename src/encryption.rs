@@ -23,11 +23,11 @@ pub struct PasswordEntry {
     pub password: String
 }
 
-pub fn encrypt_data(data: String, master_password: String) -> Result<(), Box<dyn std::error::Error>> {
+pub fn encrypt_data(data: String) -> Result<(), Box<dyn std::error::Error>> {
     let mut salt = [0u8; 16];
     rand::thread_rng().fill(&mut salt);
 
-    let key = derive_key_from_password(&master_password, &salt);
+    let key = derive_key_from_password(&crate::get_master_password(), &salt);
 
     let json_bytes = data.as_bytes();
 
@@ -49,7 +49,7 @@ pub fn encrypt_data(data: String, master_password: String) -> Result<(), Box<dyn
     Ok(())
 }
 
-pub fn decrypt_password_file(master_password: String) -> Result<PasswordData, Box<dyn std::error::Error>> {
+pub fn decrypt_password_file() -> Result<PasswordData, Box<dyn std::error::Error>> {
     // Open the encrypted file and read the contents
     let mut file = BufReader::new(File::open(crate::password_file_path())?);
 
@@ -57,7 +57,7 @@ pub fn decrypt_password_file(master_password: String) -> Result<PasswordData, Bo
     let mut salt = [0u8; 16];
     file.read_exact(&mut salt)?;
 
-    let key = derive_key_from_password(&master_password, &salt);
+    let key = derive_key_from_password(&crate::get_master_password(), &salt);
 
     // Read nonce (12 bytes)
     let mut nonce_bytes = [0u8; 12];

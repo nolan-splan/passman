@@ -16,10 +16,10 @@ use crate::encryption::{decrypt_password_file, encrypt_data, PasswordEntry, Pass
 pub const PASSWORD_FILEPATH: &'static str = ".config/passman/passwords.bin";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let master_password = get_master_password();
+    get_master_password();
 
     if !Path::new(&password_file_path()).exists() {
-        set_up_passwords_file(master_password.clone())?;
+        set_up_password_file()?;
     }
 
     println!("Select an option:");
@@ -34,10 +34,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match option.trim() {
         "1" => {
-            add_password(master_password.clone())?;
+            add_password()?;
         },
         "2" => {
-            let password_data = decrypt_password_file(master_password.clone())?;
+            let password_data = decrypt_password_file()?;
 
             let passwords = password_data.passwords;
 
@@ -57,27 +57,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn get_master_password() -> String {
-    let password = rpassword::prompt_password("Please enter your master password: ").unwrap();
-    println!("\r");
-    return password;
-}
 
-fn set_up_passwords_file(master_password: String) -> Result<PathBuf, Box<dyn std::error::Error>> {
+fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
     println!("Password file does not exist. Setting up password file...");
     
-    let password_file_path = password_file_path();
+    fs::File::create(&password_file_path()).expect("Failed to create password file");
 
-    fs::File::create(&password_file_path).expect("Failed to create password file");
+    let data = json!({ "passwords": [] });
 
-    let initial_data = json!({ "passwords": [] });
+    encrypt_data(data.to_string())?;
 
-    encrypt_data(initial_data.to_string(), master_password.clone())?;
-
-    return Ok(password_file_path);
+    Ok(())
 }
 
-fn add_password(master_password: String) -> Result<(), Box<dyn std::error::Error>> {
+fn add_password() -> Result<(), Box<dyn std::error::Error>> {
     // Get the password name
     println!("Please enter the name of the password:");
     let mut name = String::new();
@@ -94,15 +87,17 @@ fn add_password(master_password: String) -> Result<(), Box<dyn std::error::Error
         password: password.trim().to_string()
     };
 
-    let mut decrypted_data: PasswordData = decrypt_password_file(master_password.clone())?;
+    // Decrypt the password file
+    let mut decrypted_data: PasswordData = decrypt_password_file()?;
 
-    // Add the new entry
+    // Add the new entry to the decrypted data
     decrypted_data.passwords.push(password_entry.clone());
 
     // Serialize updated data to JSON
     let updated_json = serde_json::to_string(&decrypted_data)?;
 
-    let _ = encrypt_data(updated_json.clone(), master_password.clone())?;
+    // Encrypt the updated data
+    encrypt_data(updated_json.clone())?;
 
     println!("Password added."); 
 
@@ -110,8 +105,14 @@ fn add_password(master_password: String) -> Result<(), Box<dyn std::error::Error
 }
 
 #[memoize]
+pub fn get_master_password() -> String {
+    let password = rpassword::prompt_password("Please enter your master password: ").unwrap();
+    println!("\r");
+    return password;
+}
+
+#[memoize]
 pub fn password_file_path() -> PathBuf {
-    println!("password_file_path called");
     let home_dir = home_dir().expect("Failed to get home directory");
 
     return home_dir.join(PASSWORD_FILEPATH);
