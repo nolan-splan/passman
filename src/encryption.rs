@@ -28,14 +28,11 @@ pub fn encrypt_data(data: String, master_password: String, filepath: PathBuf) ->
     let mut salt = [0u8; 16];
     rand::thread_rng().fill(&mut salt);
 
-    // Derive a 256 bit key from the master password
-    let mut key_bytes = [0u8; 32];
-    pbkdf2_hmac::<Sha256>(master_password.as_bytes(), &salt, 100_000, &mut key_bytes);
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let key = derive_key_from_password(&master_password, &salt);
 
     let json_bytes = data.as_bytes();
 
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new(&key);
 
     let nonce_array: [u8; 12] = rand::random(); // Create the random nonce as a 12-byte array
     let nonce = Nonce::from_slice(&nonce_array); // Create nonce from slice
@@ -61,10 +58,7 @@ pub fn decrypt_file(filepath: PathBuf, master_password: String) -> Result<Passwo
     let mut salt = [0u8; 16];
     file.read_exact(&mut salt)?;
 
-    // Derive the 256-bit key using PBKDF2-HMAC with the same passphrase and salt
-    let mut key_bytes = [0u8; 32];
-    pbkdf2_hmac::<Sha256>(master_password.as_bytes(), &salt, 100_000, &mut key_bytes);
-    let key = Key::<Aes256Gcm>::from_slice(&key_bytes);
+    let key = derive_key_from_password(&master_password, &salt);
 
     // Read nonce (12 bytes)
     let mut nonce_bytes = [0u8; 12];
@@ -76,7 +70,7 @@ pub fn decrypt_file(filepath: PathBuf, master_password: String) -> Result<Passwo
     file.read_to_end(&mut ciphertext)?;
 
     // Set up the cipher and decrypt the data
-    let cipher = Aes256Gcm::new(key);
+    let cipher = Aes256Gcm::new(&key);
 
     let decrypted_data = match cipher.decrypt(nonce, ciphertext.as_ref()) {
         Ok(data) => data,
@@ -90,5 +84,22 @@ pub fn decrypt_file(filepath: PathBuf, master_password: String) -> Result<Passwo
     let password_data: PasswordData = serde_json::from_slice(&decrypted_data)?;
 
     Ok(password_data)
+}
+
+// Derive the 256-bit key using PBKDF2-HMAC with the same passphrase and salt
+fn derive_key_from_password(master_password: &str, salt: &[u8]) -> Key<Aes256Gcm> {
+    // Initialize a mutable array to hold the derived key bytes
+    let mut key_bytes = [0u8; 32];
+
+    // Derive the key using PBKDF2 with SHA-256
+    pbkdf2_hmac::<Sha256>(
+        master_password.as_bytes(),
+        salt,
+        100_000,
+        &mut key_bytes,
+    );
+
+    // Convert the derived bytes into a `Key<Aes256Gcm>`
+    Key::<Aes256Gcm>::from_slice(&key_bytes).clone()
 }
 
