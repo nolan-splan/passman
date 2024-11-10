@@ -57,7 +57,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
 fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
     println!("Password file does not exist. Setting up password file...");
     
