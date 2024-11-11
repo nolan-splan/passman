@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 aes = "0.8.4"
 aes-gcm = "0.10.3"
+clap = { version = "4.5.20", features = ["derive"] }
 home = "0.5.9"
 memoize = "0.4.2"
 pbkdf2 = "0.12.2"

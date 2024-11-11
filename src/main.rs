@@ -1,85 +1,58 @@
+mod cli;
 mod encryption;
 
 extern crate rpassword;
 
 use memoize::memoize;
 use home::home_dir;
+use clap::Parser;
 
 use std::{
     fs, 
-    io, 
     path::{PathBuf, Path}
 };
 use serde_json::json;
 use crate::encryption::{decrypt_password_file, encrypt_data, PasswordEntry, PasswordData};
+use crate::cli::{Cli, Commands};
 
 pub const PASSWORD_FILEPATH: &'static str = ".config/passman/passwords.bin";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
+
     get_master_password();
 
-    if !Path::new(&password_file_path()).exists() {
-        set_up_password_file()?;
-    }
+    set_up_password_file()?;
 
-    println!("Select an option:");
-    println!("   1. Add a new password");
-    println!("   2. View all passwords");
-    println!("   3. Exit");
-    println!("\r");
-
-    let mut option = String::new();
-
-    io::stdin().read_line(&mut option).expect("Failed to read option");
-
-    match option.trim() {
-        "1" => {
-            add_password()?;
+    match &cli.command.unwrap() {
+        Commands::Add { name, password } => {
+            add_password(name.clone(), password.clone())?;
         },
-        "2" => {
-            let password_data = decrypt_password_file()?;
-
-            let passwords = password_data.passwords;
-
-            println!("Passwords:");
-            for password in passwords {
-                println!("   {}: '{}'", password.name, password.password);
-            }
+        Commands::Get { name } => {
+            get_password_by_name(name.clone())?;
         },
-        "3" => {
-            std::process::exit(0);
+        Commands::List => {
+            list_passwords()?;
         },
-        _ => {
-            println!("Invalid option");
-        }
+        Commands::Remove { name } => {
+            remove_password_by_name(name.clone())?;
+        },
     }
 
     Ok(())
 }
 
 fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Password file does not exist. Setting up password file...");
-    
-    fs::File::create(&password_file_path()).expect("Failed to create password file");
-
-    let data = json!({ "passwords": [] });
-
-    encrypt_data(data.to_string())?;
-
-    Ok(())
+    if !Path::new(&password_file_path()).exists() {
+        println!("Password file does not exist. Setting up password file...");
+        fs::File::create(&password_file_path()).expect("Failed to create password file");
+        let data = json!({ "passwords": [] });
+        encrypt_data(data.to_string())?;
+    }
+    return Ok(());
 }
 
-fn add_password() -> Result<(), Box<dyn std::error::Error>> {
-    // Get the password name
-    println!("Please enter the name of the password:");
-    let mut name = String::new();
-    io::stdin().read_line(&mut name).expect("Failed to read name");
-
-    // Get the password
-    println!("Please enter the password:");
-    let mut password = String::new();
-    io::stdin().read_line(&mut password).expect("Failed to read password");
-
+fn add_password(name: String, password: String) -> Result<(), Box<dyn std::error::Error>> {
     // Construct a new password entry struct
     let password_entry = PasswordEntry {
         name: name.trim().to_string(),
@@ -99,6 +72,60 @@ fn add_password() -> Result<(), Box<dyn std::error::Error>> {
     encrypt_data(updated_json.clone())?;
 
     println!("Password added."); 
+
+    Ok(())
+}
+
+fn get_password_by_name(name: String) -> Result<(), Box<dyn std::error::Error>> {
+    let password_data = decrypt_password_file()?;
+
+    let passwords = password_data.passwords;
+
+    let matching_password: Vec<_> = passwords
+        .iter()
+        .map(|p| p)
+        .filter(|pass| pass.name == name)
+        .collect();
+
+    if matching_password.len() == 0 {
+        println!("No password found for '{}'", name);
+    } else {
+        println!("Password for '{}': '{}'", name, matching_password[0].password);
+    }
+
+    Ok(())
+}
+
+fn list_passwords() -> Result<(), Box<dyn std::error::Error>> {
+    let password_data = decrypt_password_file()?;
+
+    let passwords = password_data.passwords;
+
+    println!("Passwords:");
+    for password in passwords {
+        println!("   {}: '{}'", password.name, password.password);
+    }
+
+    Ok(())
+}
+
+fn remove_password_by_name(name: String) -> Result<(), Box<dyn std::error::Error>> {
+    let password_data = decrypt_password_file()?;
+
+    let mut passwords = password_data.passwords;
+
+    let index = passwords.iter().position(|p| *p.name == name).unwrap();
+    passwords.remove(index);
+
+    let updated_data = PasswordData {
+        passwords
+    };
+
+    let updated_json = serde_json::to_string(&updated_data)?;
+
+    encrypt_data(updated_json)?;
+
+    println!("Password for {} removed.", name);
 
     Ok(())
 }
