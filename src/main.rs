@@ -62,6 +62,14 @@ fn add_password(name: String, password: String) -> Result<(), Box<dyn std::error
     // Decrypt the password file
     let mut decrypted_data: PasswordData = decrypt_password_file()?;
 
+    // Before adding the new entry, check if a password with the same name already exists:
+    let existing_password = decrypted_data.passwords.iter().find(|p| p.name == password_entry.name);
+
+    if existing_password.is_some() {
+        println!("A password for '{}' already exists. Please use a different name.", name);
+        return Ok(());
+    }
+
     // Add the new entry to the decrypted data
     decrypted_data.passwords.push(password_entry.clone());
 
