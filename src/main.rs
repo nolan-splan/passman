@@ -18,7 +18,19 @@ use crate::cli::{Cli, Commands};
 pub const PASSWORD_FILEPATH: &'static str = ".config/passman/passwords.bin";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Cli::parse();
+    // Use `try_parse` to handle cases with no arguments gracefully
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(e) => {
+            eprintln!("{}", e); // Print the error (it shows usage/help information)
+            std::process::exit(1); // Exit gracefully
+        }
+    };
+
+    if cli.command.is_none() {
+        eprintln!("No command provided. Use 'passman --help' for usage information.");
+        std::process::exit(1);
+    }
 
     get_master_password();
 
