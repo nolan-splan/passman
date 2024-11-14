@@ -11,6 +11,7 @@ use std::{
     fs, 
     path::{PathBuf, Path}
 };
+
 use serde_json::json;
 use crate::encryption::{decrypt_password_file, encrypt_data, PasswordEntry, PasswordData};
 use crate::cli::{Cli, Commands};
@@ -58,6 +59,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
+    let path = password_file_path();
+    let dir_path = Path::new(&path).parent().unwrap();
+
+    // Create the `passman` directory if it doesn't exist
+    if !dir_path.exists() {
+        fs::create_dir_all(dir_path)?;
+    }
+
     if !Path::new(&password_file_path()).exists() {
 
         // If the password file doesn't exist, that means this is the first time the user
@@ -69,6 +78,7 @@ fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
         confirm_master_password("Please confirm your master password: ".to_string(), 1);
 
         println!("Password file does not exist. Setting up password file...");
+        println!("\r");
         fs::File::create(&password_file_path()).expect("Failed to create password file");
         let data = json!({ "passwords": [] });
         encrypt_data(data.to_string())?;
