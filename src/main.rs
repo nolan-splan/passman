@@ -148,8 +148,14 @@ fn remove_password_by_name(name: String) -> Result<(), Box<dyn std::error::Error
 
     let mut passwords = password_data.passwords;
 
-    let index = passwords.iter().position(|p| *p.name == name).unwrap();
-    passwords.remove(index);
+    let index = passwords.iter().position(|p| *p.name == name);
+
+    if index.is_none() {
+        println!("No password found for '{}'", name);
+        return Ok(());
+    }
+
+    passwords.remove(index.unwrap());
 
     let updated_data = PasswordData {
         passwords
