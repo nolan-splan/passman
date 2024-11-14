@@ -26,6 +26,12 @@ pub enum Commands {
     // Lists all passwords
     #[command(about = "Lists all passwords", long_about = None)]
     List,
+    // Updates a password by name
+    #[command(about = "Updates a password by name", long_about = None)]
+    Update {
+        #[arg(short, long)]
+        name: String,
+    },
     // Removes a password by name
     #[command(about = "Removes a password by name", long_about = None)]
     Remove {

@@ -46,6 +46,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::List => {
             list_passwords()?;
         },
+        Commands::Update { name } => {
+            update_password(name.clone())?;
+        },
         Commands::Remove { name } => {
             remove_password_by_name(name.clone())?;
         },
@@ -91,6 +94,7 @@ fn add_password(name: String) -> Result<(), Box<dyn std::error::Error>> {
     // Before adding the new entry, check if a password with the same name already exists:
     let existing_password = decrypted_data.passwords.iter().find(|p| p.name == password_entry.name);
 
+    // Maybe prompt to update instead?
     if existing_password.is_some() {
         println!("A password for '{}' already exists. Please use a different name.", name);
         return Ok(());
@@ -144,6 +148,45 @@ fn list_passwords() -> Result<(), Box<dyn std::error::Error>> {
     for password in passwords {
         println!("   {}: '{}'", password.name, password.password);
     }
+
+    Ok(())
+}
+
+fn update_password(name: String) -> Result<(), Box<dyn std::error::Error>> {
+    let mut password_data = decrypt_password_file()?;
+
+    // let mut passwords = password_data.passwords;
+
+    let index = password_data.passwords.iter().position(|p| *p.name == name);
+
+    if index.is_none() {
+        println!("No password found for '{}'", name);
+        return Ok(());
+    }
+
+    let prompt = format!("Please enter the new password for '{}': ", name);
+
+    let new_password = rpassword::prompt_password(prompt).unwrap();
+    println!("\r");
+
+    password_data.passwords.remove(index.unwrap());
+
+    // Construct a new password entry struct
+    let password_entry = PasswordEntry {
+        name: name.trim().to_string(),
+        password: new_password.trim().to_string()
+    };
+
+    // Add the new entry to the decrypted data
+    password_data.passwords.push(password_entry.clone());
+
+    // Serialize updated data to JSON
+    let updated_json = serde_json::to_string(&password_data)?;
+
+    // Encrypt the updated data
+    encrypt_data(updated_json.clone())?;
+
+    println!("Password for '{}' updated.", name);
 
     Ok(())
 }
