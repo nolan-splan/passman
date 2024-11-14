@@ -37,8 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     set_up_password_file()?;
 
     match &cli.command.unwrap() {
-        Commands::Add { name, password } => {
-            add_password(name.clone(), password.clone())?;
+        Commands::Add { name } => {
+            add_password(name.clone())?;
         },
         Commands::Get { name } => {
             get_password_by_name(name.clone())?;
@@ -73,7 +73,12 @@ fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
     return Ok(());
 }
 
-fn add_password(name: String, password: String) -> Result<(), Box<dyn std::error::Error>> {
+fn add_password(name: String) -> Result<(), Box<dyn std::error::Error>> {
+    let prompt = format!("Please enter the password for '{}': ", name);
+
+    let password = rpassword::prompt_password(prompt).unwrap();
+    println!("\r");
+
     // Construct a new password entry struct
     let password_entry = PasswordEntry {
         name: name.trim().to_string(),
