@@ -44,6 +44,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn set_up_password_file() -> Result<(), Box<dyn std::error::Error>> {
     if !Path::new(&password_file_path()).exists() {
+
+        // If the password file doesn't exist, that means this is the first time the user
+        // is running the program. Since it's the first time they're running the program,
+        // we should make them confirm their master password before creating and encrypting
+        // the password file. This way, we can ensure that the user has entered their master
+        // password correctly before we start storing their passwords.
+
+        confirm_master_password("Please confirm your master password: ".to_string(), 1);
+
         println!("Password file does not exist. Setting up password file...");
         fs::File::create(&password_file_path()).expect("Failed to create password file");
         let data = json!({ "passwords": [] });
@@ -136,6 +145,20 @@ fn remove_password_by_name(name: String) -> Result<(), Box<dyn std::error::Error
     println!("Password for {} removed.", name);
 
     Ok(())
+}
+
+fn confirm_master_password(prompt: String, count: u8) {
+    if count > 3 {
+        println!("Too many attempts to confirm master password. Exiting...");
+        std::process::exit(1);
+    }
+
+    let password = rpassword::prompt_password(prompt).unwrap();
+    println!("\r");
+
+    if password != get_master_password() {
+        confirm_master_password("Passwords do not match, please try again: ".to_string(), count + 1);
+    }
 }
 
 #[memoize]
