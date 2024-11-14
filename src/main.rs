@@ -118,6 +118,11 @@ fn list_passwords() -> Result<(), Box<dyn std::error::Error>> {
 
     let passwords = password_data.passwords;
 
+    if passwords.len() == 0 {
+        println!("No passwords found. Add a password using 'passman add'");
+        return Ok(());
+    }
+
     println!("Passwords:");
     for password in passwords {
         println!("   {}: '{}'", password.name, password.password);
