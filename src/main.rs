@@ -8,6 +8,7 @@ use home::home_dir;
 use clap::Parser;
 
 use std::{
+    io,
     fs, 
     path::{PathBuf, Path}
 };
@@ -53,6 +54,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Remove { name } => {
             remove_password_by_name(name.clone())?;
         },
+        Commands::Clobber => {
+            clobber_passwords()?;
+        }
     }
 
     Ok(())
@@ -224,6 +228,34 @@ fn remove_password_by_name(name: String) -> Result<(), Box<dyn std::error::Error
     encrypt_data(updated_json)?;
 
     println!("Password for {} removed.", name);
+
+    Ok(())
+}
+
+fn clobber_passwords() -> Result<(), Box<dyn std::error::Error>> {
+    let password_data = decrypt_password_file()?;
+
+    let mut passwords = password_data.passwords;
+
+    if passwords.len() == 0 {
+        println!("No passwords found. Nothing to clobber.");
+        return Ok(());
+    }
+
+    // Maybe add output here? Detailing which passwords are getting deleted.
+    for password in passwords.clone() {
+        let index = passwords.iter().position(|p| *p.name == password.name);
+
+        passwords.remove(index.unwrap());
+    }
+
+    let updated_data = PasswordData {
+        passwords
+    };
+
+    let updated_json = serde_json::to_string(&updated_data)?;
+
+    encrypt_data(updated_json)?;
 
     Ok(())
 }

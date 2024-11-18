@@ -38,4 +38,6 @@ pub enum Commands {
         #[arg(short, long)]
         name: String,
     },
+    #[command(about = "Removes all saved passwords without deleting the password file", long_about = None)]
+    Clobber,
 }
