@@ -8,8 +8,7 @@ use home::home_dir;
 use clap::Parser;
 
 use std::{
-    io,
-    fs, 
+    fs,
     path::{PathBuf, Path}
 };
 
@@ -123,7 +122,7 @@ fn add_password(name: String) -> Result<(), Box<dyn std::error::Error>> {
     // Encrypt the updated data
     encrypt_data(updated_json.clone())?;
 
-    println!("Password added."); 
+    println!("Password added.");
 
     Ok(())
 }
